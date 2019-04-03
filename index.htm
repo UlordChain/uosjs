@@ -1,0 +1,243 @@
+<html>
+<head>
+<title>
+dapp_uos_demo
+</title>
+<meta http-equiv="pragram" content="no-cache">
+<meta http-equiv="cache-control" content="no-cache, must-revalidate">
+<meta http-equiv="expires" content="0">
+</head>
+<body>
+<div id="hea">
+content
+</div>
+<div onclick="test_ddd()"> tran</div>
+<script src="./index.js"></script>
+<script>
+const DICE_SERVANT="uosgenesuser";
+const CHAINID = "689f5b7d2a4ee8777e42d775cd3edf7a2be85845462ef7a6cb229d3f8b2c21ba";
+const RPC_HOST = "124.232.156.101"//"114.67.37.2"
+const RPC_PORT = "9008"//20580
+const RPC_PROTO = "http"
+const HTTPRPC = RPC_PROTO + "://" +  RPC_HOST + ":" + RPC_PORT;
+const TRANSFER_CONTRACT = "uosio.token";
+var par={"account_name":"huqinghuqing"}
+var usmart;
+
+var FromAccount="huqinghuqing"
+var ToAccount="robertocarlo";
+
+function get_query_options(){
+    return {
+        httpEndpoint   : HTTPRPC,
+        expireInSeconds: 60,
+        broadcast      : true,
+        debug          : false,
+        sign           : false
+    };
+}
+function get_new_work(){
+
+    return {
+        blockchain: "uos",
+        host: RPC_HOST,
+        port: RPC_PORT,
+        protocol: RPC_PROTO,
+        chainId: CHAINID
+    }
+
+}
+
+function seti(params) {
+    document.getElementById("hea").innerHTML=(params);
+}
+function load(){
+//test_getaccount()
+//test_Identity();
+}
+
+//usmart 插件准备好后,初始化dapp的usmart对象
+document.addEventListener('usmartLoaded', Extension => {
+    //usmart初始化成功,与usmart有关的接口,在这里被调用
+    usmart = window.usmart;
+    if(usmart == null){
+        alert_message("请先配置Usmart!");
+        return
+    }
+    if(navigator.userAgent.includes("MdsApp")){
+        window.usmart = null;
+    }else{
+        delete window.usmart;
+    }
+
+    load()
+});
+
+//获取账户信息
+function test_Identity(){
+    usmart
+        .getIdentity({ accounts: [get_new_work()] })
+            .then(identity => {
+            const account = identity.accounts.find(
+                function(acc) { return acc.blockchain === "uos"
+            })
+            console.log("test_Identity",account)
+            .catch(err => {
+            });
+        });
+}
+
+function test_loginout(){
+    this.usmart.forgetIdentity();
+    //todo you code
+
+}
+
+function test_getaccount(){
+ const uos = Uos(get_query_options());
+ uos.getAccount({account_name:"huqinghuqing"}).then(data=>{
+     console.log("result");
+     console.log("account",data);
+ })
+}
+
+
+//查询账户
+function  test_checkAccount(){
+
+    const uos = Uos(get_query_options());
+        uos.getTableRows({
+            code:TRANSFER_CONTRACT,
+            scope:par.account_name,
+            table:"accounts",
+            json:true
+        }).then(result=>{
+            for(var idx = 0; idx < result.rows.length; idx ++){
+                    var balance = result.rows[idx].balance;
+                    var spts = balance.split(" ");
+                    if(spts[1] == "UOS"){
+                        console.log("test_checkAccount",result.rows[idx])
+                    }
+                }
+        })
+
+}
+
+
+//-----------------------------------------------------------------------------------------------end
+
+//dapp 转帐
+function test_Pay(){
+    var net=get_new_work();
+    usmart //获取身份
+        .getIdentity({ accounts: [net] })
+        .then(identity => {
+        const account = identity.accounts.find(
+            acc => acc.blockchain === "uos"
+        );
+            test_2_contract(account,net);
+        })
+        .catch(err => { console.log("test_Pay",JSON.stringify(err));});
+}
+
+function test_2_contract(account,net){
+    var options = {
+            authorization: account.name+'@'+account.authority,
+            broadcast: true,
+            sign: true
+        }
+        const usmartUOS = usmart.uos(net, Uos, options, net.protocol);
+        usmartUOS.contract(TRANSFER_CONTRACT,{accounts:[net]}).then(contract => {
+        test_2_transfer(contract,account);
+    }).catch(e => {});
+}
+
+function test_2_transfer(contract,account){
+        const opts = { authorization:[account.name+'@'+account.authority] };
+        var memostr = "oneshot;;66"; //66 是押注的数字 其他内容 保持不变
+        contract.transfer(account.name, DICE_SERVANT, "1.0000 UOS", memostr).then(trx => {
+        seti("成功")
+        }).catch(e => { console.error(e); });
+}
+//----------------------------
+
+//取消投票
+function test_canvote(){
+    var net=get_new_work();
+    const usmartUOS = usmart.uos(net, Uos);
+   usmartUOS.transaction({ //7
+        actions:[
+            {
+                account:"uosio",
+                name:"cancelvote",
+                authorization:[
+                    {
+                        actor:FromAccount,
+                        permission:'active'
+                    }
+                ],data :{
+                    voter:FromAccount,
+                    quantity:"1.0000 UOS",
+                    producers:["uosvegasjack"] //取消人
+                }
+            }
+        ],
+    }).then(data=>{
+       // console.log("test_voteOle ok",JSON.stringify(data))
+        seti("ok can")
+    })
+}
+
+
+//取消抵押
+function test_undelegatebw(){
+    var net=get_new_work();
+    const usmartUOS = usmart.uos(net, Uos);
+   usmartUOS.transaction({ //7
+        actions:[
+            {
+                account:"uosio",
+                name:"undelegatebw",
+                authorization:[
+                    {
+                        actor:FromAccount,
+                        permission:'active'
+                    }
+                ],data :{
+                    from:FromAccount,
+                    receiver:FromAccount,
+                    unstake_net_quantity:"25.0000 UOS",
+                    unstake_cpu_quantity:"25.0000 UOS",
+                }
+            }
+        ],
+    }).then(data=>{
+       // console.log("test_voteOle ok",JSON.stringify(data))
+        seti("ok un")
+    })
+}
+
+//抵押
+function test_dy(){
+    var net=get_new_work();
+    const usmartUOS = usmart.uos(net, Uos);
+    console.log(usmartUOS)
+    usmartUOS.delegatebw(FromAccount,FromAccount,"5.0000 UOS","0.0000 UOS",0).then(xx=>{
+        seti("uos ok")
+    })
+
+}
+
+//投票
+function test_tp(){
+    var net=get_new_work();
+    const usmartUOS = usmart.uos(net, Uos);
+    usmartUOS.voteproducer(FromAccount,"1.0000 UOS","uosvegasjack",["uosvegasjack"]).then(xx=>{
+        seti("偶票 ok")
+    })
+    
+}
+
+</script>
+</body>
+</html>
